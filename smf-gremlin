@@ -13,9 +13,12 @@ from itertools import (chain, ifilter, product)
 from string import (letters, printable, lowercase,
                         uppercase, digits, punctuation)
 
-NORMAL  = 0
-INTENSE = 1
-INSANE  = 2
+levels = {
+    'NORMAL'  : 0,
+    'INTENSE' : 1,
+    'INSANE'  : 2
+}
+
 verbose = False
 
 # if we ever make this into a module we can allow users to add
@@ -125,7 +128,7 @@ def setup():
 
     
     if params['mode'] == 'dict':
-        params['intensity'] = args.intensity
+        params['intensity'] = args.intensity.upper()
         try:
             params['wordlist'] = args.wordlist[0]
         except IndexError:
@@ -164,6 +167,12 @@ def bruteforce_attack(mode=None, username=None,hashh=None,
 
 def dictionary_helper(username, hashh, word, intensity):
 
+    if len(word) == 0:
+        if sha1(username).hexdigest() == hashh:
+            return ''
+        else:
+            return None
+
     # check <word> against hash
     if sha1(username+word).hexdigest() == hashh:
         return word
@@ -172,10 +181,11 @@ def dictionary_helper(username, hashh, word, intensity):
     if sha1(username+word[0].upper()+word[1:]).hexdigest() == hashh:
         return word[0].upper()+word[1:]
 
-    if intensity >= INTENSE:
+    result = None
+    if levels[intensity] >= levels['INTENSE']:
 
-        
-        rmax = 2 if intensity == INTENSE else 4
+    
+        rmax = 2 if levels[intensity] == levels['INTENSE'] else 4
         rmin = 0
 
         # check <word>[0-9][0-9] against hash
@@ -228,21 +238,19 @@ def dictionary_attack(mode=None, username=None,
 
             word = line.strip()
 
-            if intensity == INSANE:
+            if levels[intensity] == levels['INSANE']:
 
                 tryme = [c if c not in subs.keys() else subs[c] for c in word]
 
-                result = list(chain.from_iterable(ifilter(
-                                lambda x: dictionary_helper(
-                                        username,
-                                        hashh,
-                                        ''.join(x),
-                                        intensity),
-                                product(*tryme))))
 
-                if len(result) != 0:
-                    return ''.join(result)
-
+                for attempt in product(*tryme):
+                    result = dictionary_helper(
+                                            username,
+                                            hashh,
+                                            ''.join(attempt),
+                                            intensity)
+                    if result is not None:
+                        return result
             else:
                 result = dictionary_helper(username, hashh, word, intensity)
                 if result is not None:
