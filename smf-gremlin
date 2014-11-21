@@ -41,12 +41,18 @@ subs = {
     'o' : ['o', '0']
 }
 
+parser = ArgumentParser()
+
 def main():
 
     params = setup()
 
     if params['mode'] == 'dict':
-        result = dictionary_attack(**params)
+        try:
+            result = dictionary_attack(**params)
+        except IOError:
+            error_handler('invalid wordlist file')
+            
     else:
         result = bruteforce_attack(**params)
 
@@ -57,9 +63,8 @@ def main():
     
 def setup():
 
-    global verbose 
-
-    parser = ArgumentParser()
+    global verbose
+    global parser
 
     parser.add_argument('--verbose', '-v',
                     action='store_true',
@@ -126,9 +131,7 @@ def setup():
         try:
             params['wordlist'] = args.wordlist[0]
         except IndexError:
-            parser.print_help()
-            print '\nNo wordlist file specified.\n'
-            sys.exit()
+            error_handler('no wordlist file specified')
     else:
         params['charset'] = args.charset
         params['rmin'] = args.bfrange[0]
@@ -136,6 +139,12 @@ def setup():
     
     return params
     
+
+def error_handler(error_message):
+
+    parser.print_help() 
+    print '\nError: '+error_message.lower().strip()+'\n'
+    sys.exit()
 
 def bruteforce_attack(mode=None, username=None,hashh=None,
                                         rmax=None,rmin=None,charset='alnum'):
