@@ -1,0 +1,213 @@
+#!/bin/env python
+# script:  mf-gremlin v1.0
+# author:  solstice
+# email:   solstice@member.fsf.org
+# created: 2014
+# description:
+#   A Simple Machines Forum sha1 password cracker. Based loosly on the script
+#   written in 2009 by 0x90. The author of this script is not responsible for
+#   how you choose to use it.
+
+import sys
+from argparse import ArgumentParser
+from hashlib  import sha1
+from itertools import (chain, ifilter, product)
+from string import (letters, printable, lowercase,
+                        uppercase, digits, punctuation)
+
+NORMAL  = 0
+INTENSE = 1
+INSANE  = 2
+verbose = False
+
+# if we ever make this into a module we can allow users to add
+# their own charsets
+charsets = {
+    'all'     : printable,
+    'alnum'   : letters + digits,
+    'alpha'   : letters,
+    'lower'   : lowercase,
+    'upper'   : uppercase,
+    'digit'   : digits,
+    'symbols' : punctuation
+} 
+
+# common substituions for alphabetic characters
+subs = {
+    'a' : ['a', '@'],
+    'e' : ['e', '3'],
+    'i' : ['i', '1'],
+    's' : ['s', 'z'],
+    'o' : ['o', '0']
+}
+
+def main():
+
+    params = setup()
+
+    if params['mode'] == 'dict':
+        result = dictionary_attack(**params)
+    else:
+        result = bruteforce_attack(**params)
+
+    if result is not None:
+        print 'Password found: '+result
+    else:
+        print 'No password found.'
+    
+def setup():
+
+    global verbose 
+
+    parser = ArgumentParser()
+
+    parser.add_argument('--verbose', '-v',
+                    action='store_true',
+                    dest = 'verbose',
+                    help='verbose flag' )
+
+    parser.add_argument('--mode', '-m',
+                    choices = [ 'dict' , 'brute' ],
+                    dest = 'mode',
+                    required = True,
+                    help='Sets mode to either dictionary or bruteforce.'+\
+                            'You must set the mode to either dict or brute'+\
+                            'to run gremlin.')
+
+    parser.add_argument('--intensity', '-i',
+                    default='normal',
+                    dest='intensity',
+                    choices= [ 'normal', 'intense', 'insane'],
+                    help='Select the dictionary attack insensity.'+\
+                        ' Defaults to normal when flag omitted.')
+
+    parser.add_argument('--range', '-r',
+                    nargs=2,
+                    dest='bfrange',
+                    metavar=('<min>', '<max>'),
+                    default=[1, 8],
+                    help='Attempt passwords with <min>-<max> positions')
+                    
+
+    parser.add_argument('--charset', '-c',
+                    default='alnum',
+                    dest='charset',
+                    choices= [ 'all', 'alnum', 'alpha', 
+                            'lower', 'upper', 'digit', 'symbol'],
+                    help='Select charset for bruteforce attack.'+\
+                            ' Defaults to alnum when flag omitted.') 
+
+    parser.add_argument('username',
+                    help='The username of the account '+\
+                                    'the password belongs to.')
+
+    parser.add_argument('hash',
+                help='The sha1sum of the password '+\
+                                    'you are trying to crack.')
+
+    parser.add_argument(
+                    'wordlist',
+                    nargs='*',
+                    help='wordlist file for dictionary attack')
+
+    args = parser.parse_args()
+
+    verbose = args.verbose
+
+    params = {
+        'mode' : args.mode.strip(),
+        'username' : args.username.strip(),
+        'hashh' : args.hash.strip()
+    }
+
+    
+    if params['mode'] == 'dict':
+        params['intensity'] = args.intensity
+        try:
+            params['wordlist'] = args.wordlist[0]
+        except IndexError:
+            parser.print_help()
+            print '\nNo wordlist file specified.\n'
+            sys.exit()
+    else:
+        params['charset'] = args.charset
+        params['rmin'] = args.bfrange[0]
+        params['rmax'] = args.bfrange[1]
+    
+    return params
+    
+
+def bruteforce_attack(mode=None, username=None,hashh=None,
+                                        rmax=None,rmin=None,charset='alnum'):
+
+    result = list(chain.from_iterable(ifilter(
+                lambda x: sha1(username+''.join(x)).hexdigest() == hashh,
+                chain.from_iterable(product(
+                    charsets[charset],repeat=i)
+                        for i in range(int(rmin), int(rmax)+1)))))
+
+    if len(result) != 0:
+        return ''.join(result)
+
+    return None
+
+def dictionary_helper(username, hashh, word, intensity):
+
+    # check <word> against hash
+    if sha1(username+word).hexdigest() == hashh:
+        return word
+
+    # check <Word> against hash
+    if sha1(username+word[0].upper()+word[1:]).hexdigest() == hashh:
+        return word[0].upper()+word[1:]
+
+    if intensity >= INTENSE:
+
+        
+        rmax = 2 if intensity == INTENSE else 4
+        rmin = 0
+
+        # check <word>[0-9][0-9] against hash
+        result = bruteforce_attack(username+word, hashh, rmax, rmin, 'digits')
+
+        if result is None:
+       
+            # check <Word>[0-9][0-9] against hash
+            word = word[0].upper()+word[1:]
+            result = bruteforce_attack(username+word, hashh, rmax, rmin, 'digits')
+
+    return None if result is None else word + result
+
+
+def dictionary_attack(mode=None, username=None,hashh=None, wordlist=None,intensity=None):
+
+    with open(wordlist, 'r') as input_handle:
+
+        for line in input_handle:
+
+            word = line.strip()
+
+            if intensity == INSANE:
+
+                tryme = [c if c not in subs.keys() else subs[c] for c in word]
+
+                result = list(chain.from_iterable(ifilter(
+                                lambda x: dictionary_helper(
+                                        username,
+                                        hashh,
+                                        ''.join(x),
+                                        intensity),
+                                product(*tryme))))
+
+                if len(result) != 0:
+                    return ''.join(result)
+
+            else:
+                result = dictionary_helper(username, hashh, word, intensity)
+                if result is not None:
+                    return result
+
+        return None 
+
+if __name__  == '__main__':
+    main()
