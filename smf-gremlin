@@ -183,12 +183,13 @@ def dictionary_helper(username, hashh, word, intensity):
        
             # check <Word>[0-9][0-9] against hash
             word = word[0].upper()+word[1:]
-            result = bruteforce_attack(username+word, hashh, rmax, rmin, 'digits')
+            result = bruteforce_attack(username+word,hashh,rmax,rmin,'digits')
 
     return None if result is None else word + result
 
 
-def dictionary_attack(mode=None, username=None,hashh=None, wordlist=None,intensity=None):
+def dictionary_attack(mode=None, username=None,
+                    hashh=None, wordlist=None,intensity=None):
 
     with open(wordlist, 'r') as input_handle:
 
