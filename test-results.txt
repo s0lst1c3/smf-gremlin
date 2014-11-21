@@ -1,0 +1,184 @@
+Case: 0
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: normal
+
+    expected result: yellow
+    actual result: yellow
+     SUCCESS
+Case: 1
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: normal
+
+    expected result: Oranges
+    actual result: Oranges
+     SUCCESS
+Case: 2
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: intense
+
+    expected result: yellow
+    actual result: yellow
+     SUCCESS
+Case: 3
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: intense
+
+    expected result: Oranges
+    actual result: Oranges
+     SUCCESS
+Case: 4
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: insane
+
+    expected result: yellow
+    actual result: yellow
+     SUCCESS
+Case: 5
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: insane
+
+    expected result: Oranges
+    actual result: Oranges
+     SUCCESS
+Case: 6
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: intense
+
+    expected result: Grapefruit20
+    actual result: Grapefruit20
+     SUCCESS
+Case: 7
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: insane
+
+    expected result: Grapefruit20
+    actual result: Grapefruit20
+     SUCCESS
+Case: 8
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: intense
+
+    expected result: hardboiled8
+    actual result: hardboiled8
+     SUCCESS
+Case: 9
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: insane
+
+    expected result: sug@rcub3z
+    actual result: sug@rcub3z
+     SUCCESS
+Case: 10
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: insane
+
+    expected result: Sug@rcub3z
+    actual result: Sug@rcub3z
+     SUCCESS
+Case: 11
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: insane
+
+    expected result: p1zza@ndwings38
+    actual result: p1zza@ndwings38
+     SUCCESS
+Case: 12
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: insane
+
+    expected result: W33kendnach0s423
+    actual result: W33kendnach0s423
+     SUCCESS
+Case: 13
+mode: dict
+    mode: dict
+    username: solstice
+    intensity: insane
+
+    expected result: Cak3s0928
+    actual result: Cak3s0928
+     SUCCESS
+Case: 14
+mode: brute
+    mode: brute
+    username: solstice
+    charset: alnum
+
+    expected result: f5Az
+     SUCCESS
+Case: 15
+mode: brute
+    mode: brute
+    username: solstice
+    charset: alnum
+
+    expected result: f5Az
+     SUCCESS
+Case: 16
+mode: brute
+    mode: brute
+    username: solstice
+    charset: alpha
+
+    expected result: aeFs
+     SUCCESS
+Case: 17
+mode: brute
+    mode: brute
+    username: solstice
+    charset: lower
+
+    expected result: meud
+     SUCCESS
+Case: 18
+mode: brute
+    mode: brute
+    username: solstice
+    charset: digit
+
+    expected result: 8634
+     SUCCESS
+Case: 19
+mode: brute
+    mode: brute
+    username: solstice
+    charset: symbol
+
+    expected result: &%)$
+     SUCCESS
+Case: 20
+mode: brute
+    mode: brute
+    username: solstice
+    charset: all
+
+    expected result: 8&cA
+     SUCCESS
+
+Failures: 0

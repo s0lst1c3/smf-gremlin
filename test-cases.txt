@@ -12,10 +12,10 @@ dict insane Sug@rcub3z
 dict insane p1zza@ndwings38
 dict insane W33kendnach0s423
 dict insane Cak3s0928
-brute all 1 5 8&cA$
 brute alnum 1 4 f5Az
 brute alnum 2 6 f5Az
-brute alpha 2 6 nEWssC
+brute alpha 2 4 aeFs
 brute lower 1 4 meud
-brute digit 1 8 86341532
+brute digit 1 8 8634
 brute symbol 1 4 &%)$
+brute all 1 5 8&cA

@@ -7,6 +7,7 @@
 #   how you choose to use it.
 
 import sys
+import profile
 from argparse import ArgumentParser
 from hashlib  import sha1
 from itertools import (chain, ifilter, product)
@@ -25,12 +26,12 @@ verbose = False
 # their own charsets
 charsets = {
     'all'     : printable,
-    'alnum'   : letters + digits,
-    'alpha'   : letters,
+    'alnum'   : lowercase+uppercase+digits,
+    'alpha'   : lowercase+uppercase,
     'lower'   : lowercase,
     'upper'   : uppercase,
     'digit'   : digits,
-    'symbols' : punctuation
+    'symbol' : punctuation
 } 
 
 # common substituions for alphabetic characters
@@ -151,18 +152,17 @@ def bruteforce_attack(mode=None, username=None,hashh=None,
                                         rmax=None,rmin=None,charset='alnum'):
 
 
-    if mode == 'brute':
-        print 'Bruteforcing . . .'
+    rmin = int(rmin)
+    rmax = int(rmax)+1
+    charset = charsets[charset]
 
-    result = list(chain.from_iterable(ifilter(
-                lambda x: sha1(username+''.join(x)).hexdigest() == hashh,
-                chain.from_iterable(product(
-                    charsets[charset],repeat=i)
-                        for i in range(int(rmin), int(rmax)+1)))))
+    for attempt in (''.join(candidate)
+                    for candidate in chain.from_iterable(product(
+                    charset, repeat=i) for i in xrange(rmin, rmax))):
 
-    if len(result) != 0:
-        return ''.join(result)
-
+        param = username+attempt 
+        if sha1(param).hexdigest() == hashh:
+            return attempt
     return None
 
 def dictionary_helper(username, hashh, word, intensity):
@@ -209,32 +209,13 @@ def dictionary_helper(username, hashh, word, intensity):
 
     return None if result is None else word + result
 
-def file_len(fname):
-    with open(fname) as f:
-        for i, l in enumerate(f):
-            pass
-    return i + 1 
-
 def dictionary_attack(mode=None, username=None,
                     hashh=None, wordlist=None,intensity=None):
 
-    linecount = file_len(wordlist)
-    progress_bar = ProgressBar(linecount)
-
     with open(wordlist, 'r') as input_handle:
-
-        count = 0
-        progress_bar.display()
-        one_percent = progress_bar.one_percent
 
         
         for line in input_handle:
-
-            if count == one_percent:
-
-                progress_bar.increment()
-                progress_bar.display()
-                count = 0
 
             word = line.strip()
 
@@ -255,30 +236,9 @@ def dictionary_attack(mode=None, username=None,
                 result = dictionary_helper(username, hashh, word, intensity)
                 if result is not None:
                     return result
-    
-            count += 1
-        
 
         return None 
 
-class ProgressBar:
-
-    def __init__(self, iterations):
-
-        self.one_percent = int(.01 * iterations)
-        self.percent_complete = 0
-        self.bars = ''
-
-    def increment(self):
-
-        self.percent_complete += 1
-        if self.percent_complete % 2 == 0:
-            self.bars += '='
-
-    def display(self):
-        print '\n' * 200
-        print '[%-50s]' % (self.bars)
-        print 'Progress: %d%%' % (self.percent_complete)
-
 if __name__  == '__main__':
+    #profile.run('main()')
     main()
