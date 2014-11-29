@@ -1,0 +1,123 @@
+#!/bin/env python
+# script:  mf-gremlin v1.0
+# created: 2014
+# description:
+#   A Simple Machines Forum sha1 password cracker. Based loosly on the script
+#   written in 2009 by 0x90. The author of this script is not responsible for
+#   how you choose to use it.
+
+from hashlib  import sha1
+from itertools import (chain, ifilter, product)
+from string import (letters, printable, lowercase,
+                        uppercase, digits, punctuation)
+
+def bruteforce(username, hashh, rmax, rmin ,charset):
+
+    charsets = {
+        'all'     : printable,
+        'alnum'   : lowercase+uppercase+digits,
+        'alpha'   : lowercase+uppercase,
+        'lower'   : lowercase,
+        'upper'   : uppercase,
+        'digit'   : digits,
+        'symbol'  : punctuation
+    } 
+
+    rmin = int(rmin)
+    rmax = int(rmax)+1
+    charset = charsets[charset]
+
+    for attempt in (''.join(candidate)
+                    for candidate in chain.from_iterable(product(
+                    charset, repeat=i) for i in xrange(rmin, rmax))):
+
+        #print attempt, len(attempt)
+        #print username,len(username)
+        #print sha1(username+attempt).hexdigest()
+        if sha1(username+attempt).hexdigest() == hashh:
+            return attempt
+
+    return None
+
+def dictionary_normal(wordlist, hashh, username):
+
+    with open(wordlist, 'r') as input_handle:
+
+        for line in input_handle:
+            word = line.strip()
+
+            if sha1(username+word).hexdigest() == hashh:
+                return word
+    
+            if sha1(username+word[0:1].upper()+word[1:]).hexdigest() == hashh:
+                return word[0:1].upper()+word[1:]
+
+    return None
+
+def dictionary_intense(wordlist, hashh, username):
+
+    with open(wordlist, 'r') as input_handle:
+
+        for line in input_handle:
+            word = line.strip()
+    
+            if sha1(username+word).hexdigest() == hashh:
+                return word
+    
+            Word = word[0:1].upper()+word[1:]
+            if sha1(username+Word).hexdigest() == hashh:
+                return Word
+        
+            for attempt in (''.join(candidate)
+                            for candidate in chain.from_iterable(product(
+                            digits, repeat=i) for i in xrange(0, 5))):
+           
+                if sha1(username+word+attempt).hexdigest() == hashh:
+                    return word+attempt
+
+                if sha1(username+Word+attempt).hexdigest() == hashh:
+                    return Word+attempt
+
+    return None
+
+def dictionary_insane(wordlist, hashh, username):
+
+    subs = {
+        'a' : ['a', '@'],
+        'e' : ['e', '3'],
+        'i' : ['i', '1'],
+        's' : ['s', 'z'],
+        'o' : ['o', '0']
+    }
+
+    with open(wordlist, 'r') as input_handle:
+
+        for line in input_handle:
+            word = line.strip()
+
+            tryme = [c if c not in subs.keys() else subs[c] for c in word]
+
+
+            for attempt in product(*tryme):
+
+                word = ''.join(attempt)
+
+                if sha1(username+word).hexdigest() == hashh:
+                    return word
+    
+
+                Word = word[0:1].upper()+word[1:]
+                if sha1(username+Word).hexdigest() == hashh:
+                    return Word
+        
+
+                for attempt in (''.join(candidate)
+                                for candidate in chain.from_iterable(product(
+                                digits, repeat=i) for i in xrange(0, 5))):
+           
+                    if sha1(username+word+attempt).hexdigest() == hashh:
+                        return word+attempt
+
+                    if sha1(username+Word+attempt).hexdigest() == hashh:
+                        return Word+attempt
+    return None
