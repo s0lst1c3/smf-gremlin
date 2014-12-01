@@ -9,76 +9,298 @@
 from os import path
 from sys import argv, exit
 import profile
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawTextHelpFormatter
 from hashlib  import sha1
 from itertools import (chain, ifilter, product, imap)
 from string import (letters, printable, lowercase,
                         uppercase, digits, punctuation)
 
-def get_input(prompt, validator, numeric=False):
+__version_info__ = ('0','0','0')
+__version__ = '.'.join(__version_info__)
+__prog__ = 'smf-gremlin'
 
-    while True:
-        clear()
-        titlebar(prompt.count('\n'))
-        print prompt
-        user_input = raw_input(': ').strip().lower()
-        if numeric:
-            try:
-                user_input = int(user_input)
-            except ValueError:
-                print 'Input must be numeric.'
-                continue
+def complain_and_quit(message=None, parser=None):
 
-        if validator(user_input):
-            return user_input
+    if message is not None:
 
-def clear():
+        print '\n'+message
 
-    print '\n' * 100
+    parser.print_help()
+    exit()
 
-def titlebar(heightOfContent):
+def print_mode_flags():
 
-    print '='*80
-    print '||'+'sfm-gremlin'.center(76, ' ')+'||'
-    print '='*80
-    print (10-heightOfContent) * '\n'
+    
+    return """
 
-def setup():
+
+Examples:
+    Ex 1:
+        smf-gremlin -u imauser -p asdfj23423lkjhasff -w wordlist.txt --intense
+    Ex 2:
+        smf-gremlin -U userlist.txt -w wordlist.txt --insane
+    Ex 3:
+        smf-gremlin -U userlist.txt -w wordlist.txt
+    Ex 4:
+        smf-gremlin -U userlist.txt -b 8 32 --digits
+    Ex 4:
+        smf-gremlin -u someuser -p asdfasd90790787dsfasf -b -b 8 16
+    
+
+    
+
+"""
+
+def setup(parser):
+    
+    parser.add_argument('-v', '--version',
+                    action='version',
+                    version=__prog__+" "+__version__)
+                
+    parser.add_argument('-u',
+                    dest = 'username',
+                    metavar = '<username>',
+                    required = False,
+                    help = \
+
+
+'''
+The username corresponding to the hash that you are
+attempting to crack. The -u flag must be used in
+conjunction with the -p flag.
+'''
+)
+    parser.add_argument('-p',
+                    dest = 'hashh',
+                    metavar='<hash>',
+                    required = False,
+                    help =\
+'''
+The hash that you are attempting to crack. Must be 
+used in conjunction with the -u flag.
+''')
+
+    parser.add_argument('-U',
+                    dest = 'userlist',
+                    metavar='<userlist file>',
+                    required = False,
+                    help =\
+'''
+The name of the text file from which to load
+usernames and hashes to crack. The file must be
+formatted with a single <username> <hash> pair per
+line. Use this option for cracking batches of
+hashes. 
+Example file:
+
+     user_1 asl234234kasfajsdfasd898
+     user_2 asl234234sdfasdfkasfajsd
+            .
+            .
+            .
+     user_n asl23asdfasldkf79986as98 
+''')
+    
+
+    parser.add_argument('-b',
+                    nargs=2,
+                    dest='brange',
+                    metavar=('<min>', '<max>'),
+                    default=None,
+                    help=\
+'''
+Perform bruteforce attack against hashes. You must
+pass the minimum and maxium password length as
+arguments. You may select a specific charset to 
+use by passing one of the charset flags listed
+below, or use the default (alnum).
+''')
+
+    parser.add_argument('-w',
+                    dest='wordlist',
+                    metavar='<wordlist>',
+                    default=None,
+                    help=\
+'''
+Dictionary attack intensity.
+
+Perform a dictionary attack against hashes using
+the <wordlist>. You must specify a wordlist file
+to use this attack. The wordlist file must be
+formatted with a single word per line. You may
+select an attack intensity by passing one of the
+intensity flags listed below, or use the default
+(normal). 
+    
+    Example wordlist file:
+
+        foo
+        bar
+        foobar
+        faboof
+''')
+
+    parser.add_argument('--normal',
+                    action='store_true',
+                    dest='normal',
+                    help=\
+'''
+Dictionary attack intensity.
+
+Succeeds against passwords consisting of a word
+that is in the wordlist file, or a word that is
+in the wordlist file and has its first letter
+capitalized.
+
+    Examples:
+
+        password
+        Password
+''')
+    parser.add_argument('--intense',
+                    action='store_true',
+                    dest='intense',
+                    help=\
+'''
+Dictionary attack intensity.
+
+Succeeds against all passwords vulnerable to an
+attack using the --normal flag. Also succeeds
+against passwords comprised of one or two to two
+numeric characters appended to the end of a word
+from the word list file.
+
+    Examples:
+
+        password
+        Password
+        password20
+        Password20
+''')
+    parser.add_argument('--insane',
+                    action='store_true',
+                    dest='insane',
+                    help=\
+'''
+Succeeds against all passwords vulnerable to an
+attack using the --normal or --intense flags.
+Also succeeds against passwords comprised of
+up to four digits appended to the end of a word
+from the wordlist file. Also checks each word
+for known substitus. This may take a long time.
+
+    Examples:
+
+        password
+        Password20
+        p@ssword1349
+
+''')
+    parser.add_argument('--all',
+                    action='store_true',
+                    dest='all',
+                    help='charset: Use all characters for bruteforce attack.')
+    parser.add_argument('--alnum',
+                    action='store_true',
+                    dest='alnum',
+                    help='charset: Use alphanumeric characters for bruteforce attack.')
+    parser.add_argument('--alpha',
+                    action='store_true',
+                    dest='alpha',
+                    help='charset: Use letters for bruteforce attack.')
+    parser.add_argument('--lower',
+                    action='store_true',
+                    dest='lower',
+                    help='charset: Use lowercase letters for bruteforce attack.')
+    parser.add_argument('--upper',
+                    action='store_true',
+                    dest='upper',
+                    help='charset: Use uppercase letters for bruteforce attack.')
+    parser.add_argument('--digit',
+                    action='store_true',
+                    dest='digit',
+                    help='charset: Use numeric characters for bruteforce attack.')
+    parser.add_argument('--symbol',
+                    action='store_true',
+                    dest='symbol',
+                    help='charset: Use printable symbols for bruteforce attack.')
+
+    args = parser.parse_args()
+
+
 
     configs = {}
-
-    configs['input_file'] = argv[1]
-
-    # set the mode
-    # set the mode
-    configs['mode'] = get_input('\n - bruteforce\n - dictionary\n'+\
-                            '\nSelect an attack method from the list above.',
-                                lambda x : x in ('dictionary', 'bruteforce'))
-
-    # mode specific configurations
-    if configs['mode'] == 'bruteforce':
-        configs['rmin']  = get_input('Please enter minimum password length.',
-                                lambda x : x >= 0, numeric=True)
-
-        configs['rmax']  = get_input('Please enter maximum password length.',
-                                lambda x : x >= configs['rmin'], numeric=True)
-    
-        configs['charset'] = get_input(' - all\n - alnum\n - alpha\n'+\
-                                ' - lower\n - upper\n - digit\n - symbol\n'+\
-                                    '\nSelect a charset from the list above.',
-                                        lambda x : x in ( 'symbol', 'digit',
-                                             'upper', 'lower','alpha',
-                                                    'alnum', 'all'))
+                            
+    # select single hash or batch input 
+    batch_mode = args.userlist is not None
+    if batch_mode:
+        if args.hashh is not None or args.username is not None:
+            complain_and_quit(parser=parser)
+        configs['userlist'] = args.userlist
     else:
-        configs['intensity']  = get_input(' - normal\n - intense\n - insane'+\
-                                    '\nSelect an attack intensity from the '+\
-                                        'list above.', lambda x : x in ('normal',
-                                            'intense', 'insane'))
+        if args.hashh is None or args.username is None:
+            complain_and_quit(parser=parser)
+        configs['userlist'] = None
+        configs['username'] = args.username
+        configs['hashh'] = args.hashh
 
-        configs['wordlist'] = get_input('Please enter the name of the'+\
-                                    ' wordlist file you wish to use.',
-                                        lambda x : path.isfile(x))
+    # using these lists will save us from
+    # if-else chain madness
+    dict_opts = ['intense', 'normal', 'insane']
+    brute_opts = ['all', 'alnum', 'alpha',
+                    'lower', 'upper', 'digit',
+                    'symbol']
+
+    # select attack method and set mode specific configs
+    if args.brange is not None:
+
+        configs['mode'] = 'bruteforce'
+
+        try:
+            configs['rmin'] = int(args.brange[0])
+        except ValueError:
+            complain_and_quit('-b takes two numeric arguments',parser=parser)
+        
+        if configs['rmin'] < 0:
+            complain_and_quit('Mininum password length cannot be a negative number.',parser=parser)
+
+        try:
+            configs['rmax'] = int(args.brange[1])
+        except ValueError:
+            complain_and_quit('-b takes two numeric arguments',parser=parser)
+
+        if configs['rmax'] < configs['rmin']:
+            complain_and_quit('Max password length cannot be less than min length.',parser=parser)
+    
+        charset = [charset for charset in brute_opts if getattr(args, charset)]
+
+        if len(charset) == 0:
+            configs['charset'] = 'alnum'
+        elif len(charset) == 1:
+            configs['charset'] = charset[0]
+        else:
+            complain_and_quit('You may only specify one charset at a time.',parser=parser)
+
+    elif args.wordlist:
+
+        configs['mode'] = 'dictionary'
+
+        if not path.isfile(args.wordlist):
+            complain_and_quit('Invalid wordlist file',parser=parser)
+        configs['wordlist'] = args.wordlist
+
+        intensity = [i for i in dict_opts if getattr(args, i)]
+        if len(intensity) == 0:
+            config['intensity'] = 'normal'
+        elif len(intensity) == 1:
+            configs['intensity'] = intensity[0]
+        else:
+            complain_and_quit('You may only specify one intensity at a time.',parser=parser)
+    else:
+        complain_and_quit(parser=parser)
+    
     return configs
+
 
     
 def bruteforce(username, hashh, rmax, rmin ,charset):
@@ -101,9 +323,6 @@ def bruteforce(username, hashh, rmax, rmin ,charset):
                     for candidate in chain.from_iterable(product(
                     charset, repeat=i) for i in xrange(rmin, rmax))):
 
-        #print attempt, len(attempt)
-        #print username,len(username)
-        #print sha1(username+attempt).hexdigest()
         if sha1(username+attempt).hexdigest() == hashh:
             return attempt
 
@@ -184,7 +403,8 @@ def dictionary_insane(wordlist, hashh, username):
                 for attempt in (''.join(candidate)
                                 for candidate in chain.from_iterable(product(
                                 digits, repeat=i) for i in xrange(0, 5))):
-           
+    
+
                     if sha1(username+word+attempt).hexdigest() == hashh:
                         return word+attempt
 
@@ -192,17 +412,19 @@ def dictionary_insane(wordlist, hashh, username):
                         return Word+attempt
     return None
 
+
+
 if __name__  == '__main__':
 
-    if len(argv) != 2:
-        print 'Usage: ./smf-gremlin <input file>'
-        exit()
-    
 
-    configs = setup()
+    parser = ArgumentParser(prog=__prog__,
+                        formatter_class=RawTextHelpFormatter,
+                        epilog=print_mode_flags())
+    configs = setup(parser)
 
-    # load function upfront to avoid unnecessary
-    # comparisons as we iterate through the input file
+    # set cracker to the address of the function we want
+    # to call. this allows us to avoid unnecessary comparisons
+    # as we iterate through the input file
     if configs['mode'] == 'bruteforce':
         cracker = bruteforce
 
@@ -216,8 +438,27 @@ if __name__  == '__main__':
         else:
             cracker = dictionary_insane
 
+
     successes = []
-    for username_hash in imap(lambda x : x.strip().split(' ', 1), open(configs['input_file'])):
+    if configs['userlist'] is None:
+        
+        # call the appropriate method
+        if configs['mode'] == 'bruteforce':
+            result = cracker(configs['username'],
+                            configs['hashh'],
+                            configs['rmax'],
+                            configs['rmin'],
+                            configs['charset'])
+        else:
+            result = cracker(configs['wordlist'], configs['hashh'], configs['username'])
+
+        if result is not None:
+            print 'Password found!'
+            successes.append((configs['username'], result))
+
+    else:
+        # don't generate a list of every word in the file. read words lazily instead
+        for username_hash in imap(lambda x : x.strip().split(' ', 1), open(configs['userlist'])):
 
             # call the appropriate method
             if configs['mode'] == 'bruteforce':
@@ -239,4 +480,3 @@ if __name__  == '__main__':
         print 'username', 'password'
         for s in successes:
             print s[0], s[1]
-
